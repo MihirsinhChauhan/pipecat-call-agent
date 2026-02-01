@@ -20,12 +20,13 @@ Run the bot using::
     uv run bot.py
 """
 
-
+import aiohttp
 from pipecat.pipeline.task import PipelineParams, PipelineTask
 from pipecat.transports.smallwebrtc.transport import SmallWebRTCTransport
 import aiofiles
 from pipecat.transports.smallwebrtc.connection import SmallWebRTCConnection
-from pipecat.services.deepgram.stt import DeepgramSTTService
+from pipecat.services.whisper.stt import WhisperSTTService
+# from pipecat.services.deepgram.stt import DeepgramSTTService
 # from pipecat.services.groq.stt import GroqSTTService
 from pipecat.frames.frames import TranscriptionMessage, TranscriptionUpdateFrame
 from pipecat.runner.types import SmallWebRTCRunnerArguments
@@ -35,7 +36,8 @@ from pipecat.audio.turn.smart_turn.local_smart_turn_v3 import LocalSmartTurnAnal
 from pipecat.audio.vad.silero import SileroVADAnalyzer
 from pipecat.processors.aggregators.llm_context import LLMContext
 from pipecat.runner.types import WebSocketRunnerArguments
-from pipecat.services.elevenlabs.tts import ElevenLabsTTSService
+# from pipecat.services.elevenlabs.tts import ElevenLabsTTSService
+from pipecat.services.piper.tts import PiperTTSService  
 from pipecat.runner.types import RunnerArguments
 from pipecat.audio.vad.vad_analyzer import VADParams
 from pipecat.pipeline.pipeline import Pipeline
@@ -83,15 +85,23 @@ async def run_bot(transport: BaseTransport):
     logger.info("Starting bot")
 
     # Speech-to-Text service
-    stt = DeepgramSTTService(api_key=os.getenv("DEEPGRAM_API_KEY"))
+    # stt = DeepgramSTTService(api_key=os.getenv("DEEPGRAM_API_KEY"))
     # stt = GroqSTTService(api_key=os.getenv("GROQ_API_KEY"))
-
+    stt = WhisperSTTService(
+        model="base",               # or "small", "medium" — trade-off speed vs accuracy
+        language="en",
+    )
 
     # Text-to-Speech service
-    tts = ElevenLabsTTSService(
-            api_key=os.getenv("ELEVENLABS_API_KEY"),
-            voice_id=os.getenv("ELEVENLABS_VOICE_ID")
-        )
+    # tts = ElevenLabsTTSService(
+    #         api_key=os.getenv("ELEVENLABS_API_KEY"),
+    #         voice_id=os.getenv("ELEVENLABS_VOICE_ID")
+    #     )
+    tts = PiperTTSService(
+        base_url="http://127.0.0.1:5000",   # your Piper HTTP server
+        aiohttp_session=aiohttp.ClientSession(),
+        voice="en_US-lessac-medium",         # folder name or voice key
+    )
 
 
     # LLM service
